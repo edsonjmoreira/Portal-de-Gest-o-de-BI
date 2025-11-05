@@ -1,5 +1,5 @@
-// FIX: Removed reference to "vite/client" which was causing a "Cannot find type definition file" error.
-// The explicit type definitions below are sufficient for this project's needs.
+/// <reference types="vite/client" />
+
 interface ImportMetaEnv {
   readonly VITE_FIREBASE_API_KEY: string;
   readonly VITE_FIREBASE_AUTH_DOMAIN: string;
