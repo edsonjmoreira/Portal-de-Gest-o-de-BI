@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Report, User, ThemeSettings, UserStatus } from './types';
 import Header from './components/Header';
@@ -5,6 +6,8 @@ import AdminDashboard from './components/AdminDashboard';
 import UserDashboard from './components/UserDashboard';
 import LoginScreen from './components/LoginScreen';
 import AdminPasswordModal from './components/AdminPasswordModal';
+import { db } from './firebase';
+import { ref, onValue, set, update, remove } from 'firebase/database';
 
 const DEFAULT_THEME: ThemeSettings = {
   primaryColor: '#0b3d66',
@@ -17,55 +20,95 @@ const DEFAULT_THEME: ThemeSettings = {
 
 const ADMIN_PASSWORD = '2345';
 
+// FIX: Cast import.meta to any to resolve environment variable type errors due to a misconfigured TypeScript environment.
+// Verifica se as variáveis de ambiente do Firebase estão configuradas
+const isFirebaseConfigured = (import.meta as any).env.VITE_FIREBASE_API_KEY && (import.meta as any).env.VITE_FIREBASE_DATABASE_URL;
+
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
   const [showAdminModal, setShowAdminModal] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const [users, setUsers] = useState<User[]>(() => {
-    try {
-      const savedUsers = localStorage.getItem('powerbi-users');
-      return savedUsers ? JSON.parse(savedUsers) : [];
-    } catch (error) {
-      console.error("Failed to parse users from localStorage", error);
-      return [];
-    }
-  });
-
-  const [reports, setReports] = useState<Report[]>(() => {
-    try {
-      const savedReports = localStorage.getItem('powerbi-reports');
-      return savedReports ? JSON.parse(savedReports) : [];
-    } catch (error) {
-      console.error("Failed to parse reports from localStorage", error);
-      return [];
-    }
-  });
-
-  const [theme, setTheme] = useState<ThemeSettings>(() => {
-    try {
-      const savedTheme = localStorage.getItem('powerbi-theme');
-      const parsedTheme = savedTheme ? JSON.parse(savedTheme) : DEFAULT_THEME;
-      return { ...DEFAULT_THEME, ...parsedTheme };
-    } catch (error) {
-      console.error("Failed to parse theme from localStorage", error);
-      return DEFAULT_THEME;
-    }
-  });
+  const [users, setUsers] = useState<User[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [theme, setTheme] = useState<ThemeSettings>(DEFAULT_THEME);
 
   useEffect(() => {
-    localStorage.setItem('powerbi-users', JSON.stringify(users));
-  }, [users]);
-  
-  useEffect(() => {
-    localStorage.setItem('powerbi-reports', JSON.stringify(reports));
-  }, [reports]);
+    if (!isFirebaseConfigured) {
+      setLoading(false);
+      return;
+    }
+
+    let usersLoaded = false;
+    let reportsLoaded = false;
+    let themeLoaded = false;
+
+    const checkAllDataLoaded = () => {
+      if (usersLoaded && reportsLoaded && themeLoaded) {
+        setLoading(false);
+      }
+    };
+
+    const usersRef = ref(db, 'users');
+    onValue(usersRef, (snapshot) => {
+      const data = snapshot.val();
+      const loadedUsers = data ? Object.values(data) : [];
+      setUsers(loadedUsers as User[]);
+      usersLoaded = true;
+      checkAllDataLoaded();
+    });
+
+    const reportsRef = ref(db, 'reports');
+    onValue(reportsRef, (snapshot) => {
+      const data = snapshot.val();
+      const loadedReports = data ? Object.values(data) : [];
+      setReports(loadedReports as Report[]);
+      reportsLoaded = true;
+      checkAllDataLoaded();
+    });
+
+    const themeRef = ref(db, 'theme');
+    onValue(themeRef, (snapshot) => {
+      const data = snapshot.val();
+      setTheme(data || DEFAULT_THEME);
+      themeLoaded = true;
+      checkAllDataLoaded();
+    });
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem('powerbi-theme', JSON.stringify(theme));
     document.documentElement.style.setProperty('--color-primary', theme.primaryColor);
     document.documentElement.style.setProperty('--color-secondary', theme.secondaryColor);
   }, [theme]);
+  
+  if (!isFirebaseConfigured) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="max-w-2xl p-8 text-center bg-white rounded-lg shadow-md border border-red-200">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Erro de Configuração</h1>
+          <p className="text-gray-700">
+            A conexão com o banco de dados não foi configurada corretamente.
+          </p>
+          <p className="mt-2 text-gray-600">
+            Por favor, crie um arquivo <strong>.env.local</strong> na raiz do projeto e adicione suas credenciais do Firebase, conforme as instruções.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+     return (
+        <div className="flex items-center justify-center min-h-screen bg-gray-100">
+            <div className="text-center">
+                <p className="text-lg font-semibold text-primary">Carregando...</p>
+                <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-secondary mx-auto mt-4"></div>
+            </div>
+        </div>
+    );
+  }
+
 
   const handleLogin = (username: string, password: string): { success: boolean, message: string } => {
     const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
@@ -84,14 +127,15 @@ const App: React.FC = () => {
     if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
       return { success: false, message: "Este nome de usuário já existe." };
     }
+    const newUserId = crypto.randomUUID();
     const newUser: User = {
-      id: crypto.randomUUID(),
+      id: newUserId,
       username,
       password,
       status: 'PENDING',
       visibleReportIds: [],
     };
-    setUsers(prev => [...prev, newUser]);
+    set(ref(db, 'users/' + newUserId), newUser);
     return { success: true, message: 'Cadastro solicitado! Aguarde a aprovação do administrador.' };
   };
 
@@ -114,29 +158,27 @@ const App: React.FC = () => {
   };
 
   const updateUserStatus = (userId: string, status: UserStatus) => {
-    setUsers(prev => prev.map(user => user.id === userId ? { ...user, status } : user));
+    update(ref(db, `users/${userId}`), { status });
   };
 
   const deleteUser = (userId: string) => {
     if (window.confirm('Tem certeza que deseja excluir este usuário permanentemente?')) {
-      setUsers(prev => prev.filter(user => user.id !== userId));
+      remove(ref(db, `users/${userId}`));
     }
   };
 
   const updateUserReportAccess = (userId: string, reportId: string, hasAccess: boolean) => {
-    setUsers(prevUsers => prevUsers.map(user => {
-      if (user.id === userId) {
-        const newVisibleIds = hasAccess
-          ? [...user.visibleReportIds, reportId]
-          : user.visibleReportIds.filter(id => id !== reportId);
-        return { ...user, visibleReportIds: newVisibleIds };
-      }
-      return user;
-    }));
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      const currentVisibleIds = user.visibleReportIds || [];
+      const newVisibleIds = hasAccess
+        ? [...currentVisibleIds, reportId]
+        : currentVisibleIds.filter(id => id !== reportId);
+      update(ref(db, `users/${userId}`), { visibleReportIds: newVisibleIds });
+    }
   };
 
   const addReport = (title: string, userInput: string): { success: boolean, message: string } => {
-    // ... existing logic ...
     let src = '';
     const trimmedInput = userInput.trim();
 
@@ -163,29 +205,39 @@ const App: React.FC = () => {
       return { success: false, message: 'O URL extraído da sua entrada é inválido.' };
     }
 
+    const newReportId = crypto.randomUUID();
     const newReport: Report = {
-      id: crypto.randomUUID(),
+      id: newReportId,
       title,
       src,
       isVisible: true,
     };
-    setReports(prevReports => [...prevReports, newReport]);
+    set(ref(db, `reports/${newReportId}`), newReport);
     return { success: true, message: 'Relatório publicado com sucesso!' };
   };
 
   const toggleReportVisibility = useCallback((id: string) => {
-    setReports(prev => prev.map(r => r.id === id ? { ...r, isVisible: !r.isVisible } : r));
-  }, []);
+    const report = reports.find(r => r.id === id);
+    if (report) {
+        update(ref(db, `reports/${id}`), { isVisible: !report.isVisible });
+    }
+  }, [reports]);
 
   const deleteReport = useCallback((id: string) => {
     if (window.confirm('Tem certeza que deseja excluir este relatório permanentemente? Esta ação não pode ser desfeita.')) {
-      setReports(prev => prev.filter(r => r.id !== id));
-      setUsers(prev => prev.map(user => ({
-        ...user,
-        visibleReportIds: user.visibleReportIds.filter(reportId => reportId !== id),
-      })));
+      remove(ref(db, `reports/${id}`));
+      users.forEach(user => {
+        if (user.visibleReportIds?.includes(id)) {
+          const newVisibleIds = user.visibleReportIds.filter(reportId => reportId !== id);
+          update(ref(db, `users/${user.id}`), { visibleReportIds: newVisibleIds });
+        }
+      });
     }
-  }, []);
+  }, [users]);
+
+  const handleThemeUpdate = (newTheme: ThemeSettings) => {
+    set(ref(db, 'theme'), newTheme);
+  };
 
   let content;
   if (isAdminAuthenticated) {
@@ -196,7 +248,7 @@ const App: React.FC = () => {
         toggleReportVisibility={toggleReportVisibility}
         deleteReport={deleteReport}
         theme={theme}
-        setTheme={setTheme}
+        setTheme={handleThemeUpdate}
         users={users}
         updateUserStatus={updateUserStatus}
         deleteUser={deleteUser}
