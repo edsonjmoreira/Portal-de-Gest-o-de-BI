@@ -1,5 +1,4 @@
-/// <reference types="vite/client" />
-
+// This file is intentionally blank to avoid conflicts with the canonical type definitions in src/vite-env.d.ts.
 // FIX: Add manual type definitions for Vite environment variables to resolve TypeScript errors.
 interface ImportMetaEnv {
     readonly VITE_FIREBASE_API_KEY: string;
