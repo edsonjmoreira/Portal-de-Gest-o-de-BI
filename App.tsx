@@ -1,3 +1,5 @@
+// Fix: Add reference to vite/client to fix 'import.meta.env' type errors.
+/// <reference types="vite/client" />
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Report, User, ThemeSettings, UserStatus } from './types';
@@ -7,7 +9,7 @@ import UserDashboard from './components/UserDashboard';
 import LoginScreen from './components/LoginScreen';
 import AdminPasswordModal from './components/AdminPasswordModal';
 import { db } from './firebase';
-import { ref, onValue, set, update, remove } from 'firebase/database';
+import { ref, onValue, set, update, remove, DataSnapshot } from 'firebase/database';
 
 const DEFAULT_THEME: ThemeSettings = {
   primaryColor: '#0b3d66',
@@ -20,9 +22,8 @@ const DEFAULT_THEME: ThemeSettings = {
 
 const ADMIN_PASSWORD = '2345';
 
-// FIX: Cast import.meta to any to resolve environment variable type errors due to a misconfigured TypeScript environment.
 // Verifica se as variáveis de ambiente do Firebase estão configuradas
-const isFirebaseConfigured = (import.meta as any).env.VITE_FIREBASE_API_KEY && (import.meta as any).env.VITE_FIREBASE_DATABASE_URL;
+const isFirebaseConfigured = import.meta.env.VITE_FIREBASE_API_KEY && import.meta.env.VITE_FIREBASE_DATABASE_URL;
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -51,7 +52,7 @@ const App: React.FC = () => {
     };
 
     const usersRef = ref(db, 'users');
-    onValue(usersRef, (snapshot) => {
+    onValue(usersRef, (snapshot: DataSnapshot) => {
       const data = snapshot.val();
       const loadedUsers = data ? Object.values(data) : [];
       setUsers(loadedUsers as User[]);
@@ -60,7 +61,7 @@ const App: React.FC = () => {
     });
 
     const reportsRef = ref(db, 'reports');
-    onValue(reportsRef, (snapshot) => {
+    onValue(reportsRef, (snapshot: DataSnapshot) => {
       const data = snapshot.val();
       const loadedReports = data ? Object.values(data) : [];
       setReports(loadedReports as Report[]);
@@ -69,7 +70,7 @@ const App: React.FC = () => {
     });
 
     const themeRef = ref(db, 'theme');
-    onValue(themeRef, (snapshot) => {
+    onValue(themeRef, (snapshot: DataSnapshot) => {
       const data = snapshot.val();
       setTheme(data || DEFAULT_THEME);
       themeLoaded = true;
