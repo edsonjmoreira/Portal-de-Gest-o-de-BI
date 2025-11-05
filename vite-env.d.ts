@@ -1,1 +1,17 @@
-// This file is intentionally blank to avoid conflicts with the canonical type definitions in src/vite-env.d.ts.
+/// <reference types="vite/client" />
+
+// FIX: Add explicit type definitions for import.meta.env to resolve errors
+// related to Vite environment variables, as the vite/client types might not be resolving correctly.
+interface ImportMetaEnv {
+  readonly VITE_FIREBASE_API_KEY: string;
+  readonly VITE_FIREBASE_AUTH_DOMAIN: string;
+  readonly VITE_FIREBASE_DATABASE_URL: string;
+  readonly VITE_FIREBASE_PROJECT_ID: string;
+  readonly VITE_FIREBASE_STORAGE_BUCKET: string;
+  readonly VITE_FIREBASE_MESSAGING_SENDER_ID: string;
+  readonly VITE_FIREBASE_APP_ID: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
