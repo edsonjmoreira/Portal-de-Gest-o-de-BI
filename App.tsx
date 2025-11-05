@@ -269,6 +269,7 @@ const App: React.FC = () => {
         isUserLoggedIn={!!currentUser}
         isAdminLoggedIn={isAdminAuthenticated}
         onAdminClick={() => setShowAdminModal(true)}
+        // FIX: Add missing props to Header component to match HeaderProps type definition and complete the component's JSX structure.
         onLogout={handleLogout}
         onAdminLogout={handleAdminLogout}
         theme={theme}
@@ -276,19 +277,14 @@ const App: React.FC = () => {
       <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-8">
         {content}
       </main>
-      {showAdminModal && (
-        <AdminPasswordModal
-          onClose={() => setShowAdminModal(false)}
-          onLogin={handleAdminLogin}
-        />
-      )}
-      <footer className="bg-gray-800 text-white text-center p-4 mt-auto">
-        <a href="/" className="hover:underline text-sm">
-          {theme.footerText}
-        </a>
+      <footer className="bg-primary text-white text-center p-4">
+        <p>&copy; {new Date().getFullYear()} {theme.footerText}</p>
       </footer>
+
+      {showAdminModal && <AdminPasswordModal onClose={() => setShowAdminModal(false)} onLogin={handleAdminLogin} />}
     </div>
   );
 };
 
+// FIX: Add default export for App component to fix import error in index.tsx.
 export default App;
