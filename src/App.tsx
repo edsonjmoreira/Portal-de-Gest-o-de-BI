@@ -7,6 +7,7 @@ import UserDashboard from './components/UserDashboard';
 import LoginScreen from './components/LoginScreen';
 import AdminPasswordModal from './components/AdminPasswordModal';
 import { db } from './firebase';
+// FIX: Import DataSnapshot type for proper typing of Firebase onValue snapshots.
 import { ref, onValue, set, update, remove, DataSnapshot } from 'firebase/database';
 
 const DEFAULT_THEME: ThemeSettings = {
@@ -50,6 +51,7 @@ const App: React.FC = () => {
     };
 
     const usersRef = ref(db, 'users');
+    // FIX: Add DataSnapshot type to snapshot parameter.
     onValue(usersRef, (snapshot: DataSnapshot) => {
       const data = snapshot.val();
       const loadedUsers = data ? Object.values(data) : [];
@@ -59,6 +61,7 @@ const App: React.FC = () => {
     });
 
     const reportsRef = ref(db, 'reports');
+    // FIX: Add DataSnapshot type to snapshot parameter.
     onValue(reportsRef, (snapshot: DataSnapshot) => {
       const data = snapshot.val();
       const loadedReports = data ? Object.values(data) : [];
@@ -68,6 +71,7 @@ const App: React.FC = () => {
     });
 
     const themeRef = ref(db, 'theme');
+    // FIX: Add DataSnapshot type to snapshot parameter.
     onValue(themeRef, (snapshot: DataSnapshot) => {
       const data = snapshot.val();
       setTheme(data || DEFAULT_THEME);
