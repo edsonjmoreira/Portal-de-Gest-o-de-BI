@@ -1,0 +1,5 @@
+{
+  "name": "Copy of SEFAZ-AP Power BI Reports",
+  "description": "A web application for the Amapá State Treasury Department (SEFAZ-AP) where administrators can publish Power BI reports and users can view and interact with them.",
+  "requestFramePermissions": []
+}
