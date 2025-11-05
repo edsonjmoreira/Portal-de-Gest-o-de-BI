@@ -1,6 +1,5 @@
-// Fix for "Cannot find type definition file for 'vite/client'".
-// The reference is removed and types for import.meta.env are defined manually.
-// This will resolve errors in other files that use Vite environment variables.
+// FIX: Removed reference to "vite/client" which was causing a "Cannot find type definition file" error.
+// The explicit type definitions below are sufficient for this project's needs.
 interface ImportMetaEnv {
   readonly VITE_FIREBASE_API_KEY: string;
   readonly VITE_FIREBASE_AUTH_DOMAIN: string;
